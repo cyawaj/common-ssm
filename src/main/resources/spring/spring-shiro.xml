@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- 配置securityManager -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="cacheManager" ref="cacheManager"/>
+		<property name="authenticator" ref="authenticator" />
+		<property name="realm" ref="jdbcRealm" />
+		<!-- 多Realm认证 -->
+		<!-- <property name="realms">
+	    		<list>
+	    			<ref bean="jdbcRealm"/>
+	    			<ref bean="secondRealm" />
+	    		</list>
+	    	</property> -->
+    	<!-- 设置RememberMe时长，以秒为单位，默认值为3153600 -->
+    	<property name="rememberMeManager.cookie.maxAge" value="3600" />
+    </bean>
+    <bean id="authenticator" class="org.apache.shiro.authc.pam.ModularRealmAuthenticator">
+    	<!-- 认证策略 -->
+    	<property name="authenticationStrategy">
+    		<!-- 默认的认证策略 -->
+    		<bean class="org.apache.shiro.authc.pam.AtLeastOneSuccessfulStrategy" />
+		<!--<bean class="org.apache.shiro.authc.pam.AllSuccessfulStrategy" /> -->
+		<!--<bean class="org.apache.shiro.authc.pam.FirstSuccessfulStrategy" /> -->
+    	</property>
+    </bean>
+	<!-- 配置cacheManager -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:ehcache.xml"/>
+    </bean>
+    
+	<!-- 配置realm -->
+    <bean id="jdbcRealm" class="proj.common.ssm.realm.ShiroRealm">
+    	<property name="credentialsMatcher">
+    		<bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+    			<property name="hashAlgorithmName" value="MD5" />
+    			<!-- 指定加密的次数 -->
+    			<property name="hashIterations" value="1024" />
+    		</bean>
+    	</property>
+    </bean>
+	<!-- 配置生命周期处理Bean处理器 -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+
+	<!-- 使用Shiro注解（配置上一个之后可使用） -->
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+	<!-- 配置SessionManager,制定sessionIdUrlRewritingEnabled的值为false，去除jsessionid -->
+	<!-- 配置sessionManager -->
+	<!--<bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+	    	<property name="sessionIdUrlRewritingEnabled" value="false" />
+	    </bean> -->
+	<!-- 配置shiroFilter,id和web.xml中<filter-name>一致 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <!-- 登录页面 -->
+        <property name="loginUrl" value="/login.html" />
+        <!-- 登录成功页面 -->
+        <property name="successUrl" value="/index.html" />
+        <!-- 没有权限的页面 -->
+        <property name="unauthorizedUrl" value="/unauthorized.jsp" />
+		<!-- 配置访问所需的权限，遵从第一次优先匹配 -->
+        <property name="filterChainDefinitions">
+            <value>
+				/login.html = anon
+                /** = authc
+            </value>
+        </property>
+    <!-- 通过数据库获得url的访问权限 -->
+	<!-- <property name="filterChainDefinitionMap" ref="filterChainDefinitionMap" /> -->
+    </bean>
+    <!-- 配置一个bean,该bean实际是一个Map,通过实例工厂类 -->
+	<!-- <bean id="filterChainDefinitionMapBuilder" class="xxx" />
+	<bean id="filterChainDefinitionMap" factory-bean="filterChainDefinitionMapBuilder" factory-method="buildFilterChainDefinitionMap" /> -->
+</beans>
